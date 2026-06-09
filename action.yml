@@ -1,0 +1,40 @@
+name: "Agent Code Reviewer"
+description: "Review pull requests with Claude — finds security, bug, performance, and style issues, posting inline and summary comments."
+author: "Le Dong"
+
+branding:
+  icon: "git-pull-request"
+  color: "purple"
+
+inputs:
+  anthropic_api_key:
+    description: "Anthropic API key (store as a repository secret). Get one at https://console.anthropic.com/"
+    required: true
+  github_token:
+    description: "GitHub token used to read the PR diff and post comments. Defaults to the workflow token."
+    required: false
+    default: ${{ github.token }}
+  model:
+    description: "Claude model id to use for the review."
+    required: false
+    default: "claude-opus-4-8"
+  effort:
+    description: "Reasoning effort: low | medium | high | max. Higher catches more, costs more."
+    required: false
+    default: "high"
+  max_diff_chars:
+    description: "Maximum number of diff characters sent to Claude. Larger diffs are truncated."
+    required: false
+    default: "200000"
+  exclude:
+    description: "Newline- or comma-separated glob patterns of files to skip (e.g. '*.lock,dist/**')."
+    required: false
+    default: ""
+  min_severity:
+    description: "Lowest severity to report: info | low | medium | high | critical."
+    required: false
+    default: "low"
+
+runs:
+  using: "node20"
+  main: "dist/index.js"

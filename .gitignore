@@ -1,0 +1,7 @@
+node_modules/
+*.log
+.DS_Store
+.env
+
+# NOTE: dist/ is intentionally committed — node20 GitHub Actions run the bundled
+# dist/index.js directly from the repo. Run `npm run all` before committing.
