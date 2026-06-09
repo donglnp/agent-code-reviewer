@@ -1,9 +1,12 @@
 # Agent Code Reviewer
 
-A reusable **GitHub Action** that reviews pull requests with **Claude**. It reads
-the PR diff, asks Claude to find issues across four categories, and posts the
-results back as **inline comments** on the changed lines plus a single
-**summary comment**.
+Review code changes with **Claude**, two ways:
+
+1. **Local CLI** (`review`) — run on your machine; uses the `claude` CLI (your
+   Claude Pro/Max subscription, no API key or credits). Best for a quick review
+   before you push.
+2. **GitHub Action** — runs on pull requests in CI; uses an Anthropic API key.
+   Posts **inline comments** plus a **summary comment** on the PR.
 
 Categories reviewed:
 
@@ -12,7 +15,37 @@ Categories reviewed:
 - ⚡ **Performance** — work in loops, N+1 queries, accidental quadratic behavior
 - 🎨 **Style** — naming, duplication, dead code, convention violations
 
-## Usage
+## Local CLI
+
+Uses the `claude` CLI under the hood, so it runs on your Claude subscription —
+no API credits needed.
+
+**Requirements:** [Claude Code](https://docs.claude.com/en/docs/claude-code/overview)
+installed and logged in (`claude` on your PATH).
+
+**Install once** (makes the `review` command available everywhere):
+
+```bash
+git clone https://github.com/donglnp/agent-code-reviewer.git
+cd agent-code-reviewer
+npm link        # or: npm install -g .
+```
+
+**Use it** from inside any git repo:
+
+```bash
+review                 # review current branch vs main/master (like a PR)
+review -w              # review uncommitted changes you're editing
+review --staged        # review only staged changes
+review -b develop      # diff against a different base branch
+review -m claude-opus-4-8   # force a specific model
+review -h              # help
+```
+
+Findings print straight to your terminal (in Vietnamese). No setup beyond
+`claude` being logged in.
+
+## GitHub Action
 
 1. Add your Anthropic API key as a repository secret named `ANTHROPIC_API_KEY`
    (Settings → Secrets and variables → Actions). Get a key at
