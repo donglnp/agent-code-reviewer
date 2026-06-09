@@ -1,0 +1,26 @@
+# Copy this file into YOUR code repo at: .github/workflows/code-review.yml
+# It runs the reviewer automatically on every pull request.
+name: Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: donglnp/agent-code-reviewer@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Optional tuning:
+          # model: claude-opus-4-8
+          # effort: high
+          # min_severity: low
+          # exclude: |
+          #   *.lock
+          #   dist/**
