@@ -12,22 +12,42 @@ export interface PrContext {
   head_sha: string;
 }
 
-/** Resolve the PR being reviewed from the workflow event context. */
-export function getPrContext(token: string): PrContext {
+/**
+ * Resolve the PR being reviewed. Order of precedence for the PR number:
+ *   1. explicit `pr_number` input (manual / comment triggers)
+ *   2. the `pull_request` event payload
+ *   3. an `issue_comment` event on a PR
+ */
+export async function getPrContext(
+  token: string,
+  explicitPrNumber?: number,
+): Promise<PrContext> {
   const { context } = github;
-  const pr = context.payload.pull_request;
-  if (!pr) {
+  const octokit = github.getOctokit(token);
+  const owner = context.repo.owner;
+  const repo = context.repo.repo;
+
+  let pull_number = explicitPrNumber;
+  if (!pull_number && context.payload.pull_request) {
+    pull_number = context.payload.pull_request.number;
+  }
+  if (!pull_number && context.payload.issue?.pull_request) {
+    pull_number = context.payload.issue.number;
+  }
+  if (!pull_number) {
     throw new Error(
-      "No pull_request found in the event payload. Run this action on `pull_request` or `pull_request_target` events.",
+      "No pull request to review. Provide `pr_number`, or run on a `pull_request` event or a `/review` comment on a PR.",
     );
   }
-  return {
-    octokit: github.getOctokit(token),
-    owner: context.repo.owner,
-    repo: context.repo.repo,
-    pull_number: pr.number,
-    head_sha: pr.head.sha,
-  };
+
+  // The head SHA is on the pull_request payload; otherwise fetch it.
+  let head_sha = context.payload.pull_request?.head?.sha as string | undefined;
+  if (!head_sha) {
+    const { data } = await octokit.rest.pulls.get({ owner, repo, pull_number });
+    head_sha = data.head.sha;
+  }
+
+  return { octokit, owner, repo, pull_number, head_sha };
 }
 
 /**

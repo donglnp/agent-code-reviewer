@@ -1,0 +1,30 @@
+# Review a PR on demand: either run manually from the Actions tab (enter a PR
+# number), or type `/review` as a comment on the PR you want reviewed.
+name: Code Review (on demand)
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to review"
+        required: true
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    # Run for a manual dispatch, or for a '/review' comment posted on a PR.
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.issue.pull_request && contains(github.event.comment.body, '/review'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          pr_number: ${{ github.event.inputs.pr_number || github.event.issue.number }}

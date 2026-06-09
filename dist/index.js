@@ -30689,20 +30689,34 @@ exports.parseCommentableLines = parseCommentableLines;
 exports.getChangedFiles = getChangedFiles;
 exports.postReview = postReview;
 const github = __importStar(__nccwpck_require__(3228));
-/** Resolve the PR being reviewed from the workflow event context. */
-function getPrContext(token) {
+/**
+ * Resolve the PR being reviewed. Order of precedence for the PR number:
+ *   1. explicit `pr_number` input (manual / comment triggers)
+ *   2. the `pull_request` event payload
+ *   3. an `issue_comment` event on a PR
+ */
+async function getPrContext(token, explicitPrNumber) {
     const { context } = github;
-    const pr = context.payload.pull_request;
-    if (!pr) {
-        throw new Error("No pull_request found in the event payload. Run this action on `pull_request` or `pull_request_target` events.");
+    const octokit = github.getOctokit(token);
+    const owner = context.repo.owner;
+    const repo = context.repo.repo;
+    let pull_number = explicitPrNumber;
+    if (!pull_number && context.payload.pull_request) {
+        pull_number = context.payload.pull_request.number;
     }
-    return {
-        octokit: github.getOctokit(token),
-        owner: context.repo.owner,
-        repo: context.repo.repo,
-        pull_number: pr.number,
-        head_sha: pr.head.sha,
-    };
+    if (!pull_number && context.payload.issue?.pull_request) {
+        pull_number = context.payload.issue.number;
+    }
+    if (!pull_number) {
+        throw new Error("No pull request to review. Provide `pr_number`, or run on a `pull_request` event or a `/review` comment on a PR.");
+    }
+    // The head SHA is on the pull_request payload; otherwise fetch it.
+    let head_sha = context.payload.pull_request?.head?.sha;
+    if (!head_sha) {
+        const { data } = await octokit.rest.pulls.get({ owner, repo, pull_number });
+        head_sha = data.head.sha;
+    }
+    return { octokit, owner, repo, pull_number, head_sha };
 }
 /**
  * Parse a unified-diff patch and collect the new-file line numbers that were
@@ -30917,7 +30931,9 @@ async function run() {
         const minSeverity = types_js_1.SEVERITIES.includes(minSeverityInput)
             ? minSeverityInput
             : "low";
-        const ctx = (0, github_js_1.getPrContext)(token);
+        const prNumberInput = core.getInput("pr_number");
+        const prNumber = prNumberInput ? parseInt(prNumberInput, 10) : undefined;
+        const ctx = await (0, github_js_1.getPrContext)(token, prNumber);
         const isExcluded = buildExcluder(exclude);
         core.info(`Reviewing PR #${ctx.pull_number} with ${model} (effort: ${effort})`);
         const changedFiles = await (0, github_js_1.getChangedFiles)(ctx, isExcluded);

@@ -14,6 +14,10 @@ inputs:
     description: "GitHub token used to read the PR diff and post comments. Defaults to the workflow token."
     required: false
     default: ${{ github.token }}
+  pr_number:
+    description: "PR number to review. Overrides the PR from the event. Useful for manual/comment triggers."
+    required: false
+    default: ""
   model:
     description: "Claude model id to use for the review."
     required: false
